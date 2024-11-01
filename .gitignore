@@ -1,0 +1,7 @@
+.gitignore
+xebia_env
+coverage.xml
+.coverage
+results.xml
+__pycache__/
+tests/unit/__pycache__/
