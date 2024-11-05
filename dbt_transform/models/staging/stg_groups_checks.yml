@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: stg_groups
+    description: "data quality checks for the model"
+    columns:
+      - name: group_id
+        description: "Unique identifier for each record"
+        data_tests:
+          - unique
+          - not_null

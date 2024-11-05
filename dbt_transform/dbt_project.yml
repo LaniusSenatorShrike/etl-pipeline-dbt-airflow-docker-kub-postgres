@@ -1,0 +1,36 @@
+name: 'dwh_transform'
+version: '1.0.0'
+config-version: 2
+
+
+profile: 'dwh_transform'
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analysis"]
+
+models:
+  dwh_transform:
+    +persist_docs:
+      relation: true
+      columns: true
+
+    base:
+      +materialized: incremental
+      # add "schema: raw" if specific schema needed for raw.
+      # target schema will be {target_schema}_{custom_schema}
+      schema: raw
+
+    staging:
+      +materialized: view
+      schema: stg
+
+    aggregate:
+      +schema: agg
+
+tests:
+  +severity: 'warn'
+  +enabled: true
+  +store_failures: true
