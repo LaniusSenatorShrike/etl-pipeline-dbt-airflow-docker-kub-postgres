@@ -12,7 +12,7 @@ class Constants:
     PASSWORD: str = "Pp@639493"
     PORT: str = "5432"
     DBNAME: str = "DWH"
-    SCHEMA: str = "public"
+    SCHEMA: str = "public_agg"
 
 
 C = Constants()

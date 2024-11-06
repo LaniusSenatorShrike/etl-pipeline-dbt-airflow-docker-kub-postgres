@@ -1,0 +1,31 @@
+services:
+  postgres-dwh:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: Pp123
+      POSTGRES_USER : dnauser
+      POSTGRES_DB : dwh
+      DBT_SCHEMA: dbt
+    expose:
+      - 5432
+    restart: always
+    volumes:
+      - ./data:/data
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres-dwh
+
+#  pgadmin:
+#    container_name: pgadmin4_container2
+#    image: dpage/pgadmin4
+#    restart: always
+#    environment:
+#      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+#      PGADMIN_DEFAULT_PASSWORD: root
+#    ports:
+#      - "5050:80"

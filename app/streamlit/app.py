@@ -3,6 +3,11 @@ import plotly.express as px
 import psycopg2
 import streamlit as st
 from constants import C
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import folium
+from streamlit_folium import folium_static
 
 
 # Function to connect to PostgreSQL
@@ -24,67 +29,114 @@ def fetch_data(query):
 
 
 # Streamlit app UI
-st.title(":rainbow[Stream Pulse]")
+st.title(":rainbow[Pulse]")
 st.subheader(":blue[*A Business Analytics App*]")
 # vertical space
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 
-# Define the query you want to run
-product_cat_highest_sales_query = """ SELECT * FROM public.agg_product_cat_highest_sales"""
-avg_user_trans_query = """ SELECT * FROM public.agg_avg_user_trans"""
-agg_monthly_rev_growth_query = """ SELECT * FROM public.agg_monthly_rev_growth"""
+# Define the query
+hot_events_query = """SELECT * FROM public_agg.hot_events"""
+popular_venues_query = """SELECT * FROM public_agg.popular_venues"""
+rsvp_heatmap_query = """SELECT * FROM public_agg.rsvp_heatmap"""
+top_active_groups_query = """SELECT * FROM public_agg.top_active_groups"""
+trending_topics_query = """SELECT * FROM public_agg.trending_topics"""
 
-# Fetching data
-product_cat_highest_sales = fetch_data(product_cat_highest_sales_query)
-avg_user_trans = fetch_data(avg_user_trans_query)
-agg_monthly_rev_growth = fetch_data(agg_monthly_rev_growth_query)
+# # Fetching data
+trending_topics_query_data = fetch_data(trending_topics_query)
+hot_events_query_data = fetch_data(hot_events_query)
+rsvp_heatmap_query_data = fetch_data(rsvp_heatmap_query)
+popular_venues_query_data = fetch_data(popular_venues_query)
+top_active_groups_query_data = fetch_data(top_active_groups_query)
 
 
-if product_cat_highest_sales is not None:
-    product_cat_highest_sales = product_cat_highest_sales["product"][0]
-else:
-    st.write("No data found or error in the query.")
-    product_metric = "N/A"
+#### Hot events
+# Set the title for the scorecard section
+st.title("🔥 Upcoming Events")
 
-st.metric(label=":blue[Top Product Category]", value=product_cat_highest_sales)
+# Create a single row with columns for each event
+cols = st.columns(len(top_active_groups_query_data))
 
-# vertical space
-st.markdown("<br><br>", unsafe_allow_html=True)
+for index, row in top_active_groups_query_data.iterrows():
+    with cols[index]:
+        # Display the participant count on top and the event name below with larger font
+        st.markdown(f"""
+            <div style="text-align: left;">
+                <p style="margin: 0;color: grey;">{row['event_count']} Events</p>
+                <h style="font-size: 1.5em; color: white; margin: 0;">{row['group_name']}</h>
+            </div>
+        """, unsafe_allow_html=True)
 
-# Create two equal columns for the charts
-col1, col2 = st.columns(2)
+#### Top Active Groups
+# Set the title for the scorecard section
+st.title("Top Active Groups")
 
-# Display Bar Chart for Average User Transaction Amount for Last 6 Months in the first column
-with col1:
-    if avg_user_trans is not None and not avg_user_trans.empty:
-        st.write(":blue[Average User Transaction Amount]")
-        # Create bar chart using Plotly
-        fig1 = px.bar(
-            avg_user_trans,
-            x="month",
-            y="avg_transaction_amount",
-            labels={"transaction_month": "Month", "avg_transaction_amount": "Average Transaction Amount"},
-        )
-        fig1.update_layout(height=315)
-        # Display chart in the first column
-        st.plotly_chart(fig1, use_container_width=True)
-    else:
-        st.write("No data found for Average User Transaction Amount.")
+# Create a single row with columns for each event
+cols = st.columns(len(hot_events_query_data))
 
-# Display Line Chart for Monthly Revenue Growth for the Last 6 Months in the second column
-with col2:
-    if agg_monthly_rev_growth is not None and not agg_monthly_rev_growth.empty:
-        st.write(":blue[Monthly Revenue Growth]")
-        fig2 = px.line(
-            agg_monthly_rev_growth,
-            x="month",
-            y="revenue_growth_percent",  # Changed to a more descriptive y-axis label
-            labels={"month": "Month", "revenue_growth_percent": "Revenue Growth (%)"},
-        )
-        fig2.update_layout(height=315)
+for index, row in hot_events_query_data.iterrows():
+    with cols[index]:
+        # Display the participant count on top and the event name below with larger font
+        st.markdown(f"""
+            <div style="text-align: left;">
+                <p style="margin: 0;color: grey;">{row['rsvp_count']} Participants</p>
+                <h style="font-size: 1.5em; color: white; margin: 0;">{row['name']}</h>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # Display chart in the second column
-        st.plotly_chart(fig2, use_container_width=True)
-    else:
-        st.write("No data found for Monthly Revenue Growth.")
+#### Trending Topics
+
+# Prepare data for the bar chart
+topics = trending_topics_query_data['top_topics']
+counts = trending_topics_query_data['topic_cnt']
+
+# Create the bar chart
+fig, ax = plt.subplots()
+ax.bar(topics, counts, color='skyblue')
+ax.set_xlabel("Topics")
+ax.set_ylabel("# Events with this topic")
+ax.set_title("Top Trending Topics")
+plt.xticks(rotation=45, ha="right")
+
+# Display the plot in Streamlit
+st.title("Top Trending Topics")
+st.pyplot(fig)
+
+
+#### Popular Venues
+
+st.title("Popular Venues")
+
+# Initialize a map centered on the Netherlands
+m = folium.Map(location=[52.3676, 4.9041], zoom_start=7)  # Center around Amsterdam
+
+# Add a pin-style marker for each venue
+for index, row in popular_venues_query_data.iterrows():
+    folium.Marker(
+        location=[row['latitude'], row['longitude']],
+        popup=f"<strong>{row['venue_name']}</strong><br>City: {row['city']}",
+        icon=folium.Icon(icon="map-marker", prefix="fa", color="red")  # Red pin marker
+    ).add_to(m)
+
+# Display the map in Streamlit
+folium_static(m, width=700, height=500)
+
+
+#### RSVP behaviour
+
+# Pivot the data for heatmap
+heatmap_data = rsvp_heatmap_query_data.pivot(index="hour_of_day", columns="day_of_week", values="rsvp_count").fillna(0)
+
+# Streamlit app display
+st.title("RSVP Heatmap by Day and Hour")
+
+# Create the heatmap
+plt.figure(figsize=(10, 6))
+sns.heatmap(heatmap_data, annot=True, fmt=".0f", cmap="YlGnBu", cbar=True)
+plt.xlabel("Day of the Week")
+plt.ylabel("Hour of the Day")
+plt.title("Number of RSVPs per Day and Hour")
+st.pyplot(plt)
+
+
+

@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 
 from utils.constants import C
 
@@ -7,15 +8,15 @@ class DataTransformer:
     def __init__(self):
         pass
 
-    def read_csv(self, file_name):
+    def read_data(self, file_name):
         """
-        Reads a CSV file into a pandas DataFrame.
+        Reads a file into a pandas DataFrame.
 
         :param file_path: Path to the CSV file
         :return: DataFrame containing the CSV data
         """
         file_path = f"{C.BASE_PATH}/{C.PROCESSING_BUCKET}/{file_name}"
-        return pd.read_csv(file_path)
+        return pd.read_json(file_path)
 
     def clean_column_names(self, data):
         """
@@ -36,7 +37,7 @@ class DataTransformer:
         :return: DataFrame with standardized date columns
         """
         for column in data.columns:
-            if "date" in column.lower():  # Check if 'date' is in the column name (case-insensitive)
+            if "date" in column.lower() or "create" in column.lower():  # Check if 'date/create' is in the column name (case-insensitive)
                 try:
                     # Try to convert the column to datetime format
                     data[column] = pd.to_datetime(data[column], format="%m/%d/%y %H:%M", errors="raise")
@@ -60,6 +61,16 @@ class DataTransformer:
         # Filling missing values with forward fill
         data = data.fillna("NULL")
 
+        # drop_duplicates() can't operate on DataFrame that contains "list" and "dictionary"
+        # that's bc they're= not hashable. Also changing dict > fronzset doesn't work as postgres can't handle frozenset
+        # Solution: Convert lists and dictionaries to JSON strings
+        def convert_values(value):
+            if isinstance(value, (list, dict)):
+                return json.dumps(value)  # Convert lists and dicts to JSON strings
+            return value
+
+        data = data.map(convert_values)
+
         # Removing duplicate records
         data = data.drop_duplicates()
 
@@ -75,6 +86,7 @@ class DataTransformer:
         :return: DataFrame with primary and foreign keys
         """
         # Set the primary key
+        # normally, after indexing a column its dropped bc it's not a column anymore, its an index
         # drop = False is being used to avoid dropping column while indexing it.
         # if it's removed, the indexed column is not ingested bc it's an index and not a column anymore
         data.set_index(primary_key, drop=False, inplace=True)
@@ -100,11 +112,3 @@ class DataTransformer:
 
         return schema_info
 
-    def calculate_total_spending_per_user(self, data, group_by_column, aggregation_column):
-        """
-        Calculates the total spending per user.
-        """
-        result = data.groupby(group_by_column)[aggregation_column].sum().reset_index()
-        # Rename the columns for clarity
-        result.columns = [group_by_column, "total_spending"]
-        return result

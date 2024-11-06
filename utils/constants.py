@@ -9,24 +9,19 @@ class Constants:
     SUCCESS_BUCKET: str = "buckets/success"
     FAILED_BUCKET: str = "buckets/failed"
     PROCESSING_BUCKET: str = "buckets/processing"
-    BASE_PATH: str = "/home/lanius/PythonProjects/Stream_Data_Engineering_Task"
-
-    POSTGRES_TABLE = {
-        "transactions.csv": "transactions",
-        "users.csv": "users",
-        "products.csv": "products",
-    }
+    BASE_PATH: str = "/home/lanius/PythonProjects/etl-pipeline-dbt-airflow-docker-kub-postgres"
 
     # primary keys
     PK = {
-        "transactions.csv": "transaction_id",
-        "users.csv": "customer_id",
-        "products.csv": "subscription_id",
+        "groups": "group_id",
+        "users": "user_id",
+        "venues": "venue_id",
     }
 
     # foreign keys
     FK = {
-        "transactions.csv": ["customer_id", "subscription_id"],
+        "users": "group_id",
+        "events": ["group_id","venue_id","user_id"],
     }
 
     # postgres server
@@ -37,6 +32,5 @@ class Constants:
     PORT: str = "5432"
     DBNAME: str = "DWH"
     SCHEMA: str = "public"
-
 
 C = Constants()
