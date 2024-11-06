@@ -1,0 +1,8 @@
+pytest-cov
+flake8
+pre-commit
+dbt-postgres
+streamlit
+plotly
+seaborn
+matplotlib
